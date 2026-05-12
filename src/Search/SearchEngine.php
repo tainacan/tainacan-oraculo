@@ -53,6 +53,7 @@ class SearchEngine {
      */
     public function search(string $query, array $collection_ids = [], array $options = []) {
         $start_time = microtime(true);
+        $rag_strategy = $this->get_rag_strategy();
 
         // Validar query
         $query = trim($query);
@@ -69,39 +70,51 @@ class SearchEngine {
         }
 
         try {
-            // 1. Gerar embedding da query
-            $embedding_provider = $this->ai_factory->create_for_embeddings();
-            $embedding_result = $embedding_provider->generate_embedding($query);
-
-            if (is_wp_error($embedding_result)) {
-                return $embedding_result;
-            }
-
-            $query_embedding = $embedding_result['embedding'];
-
-            // 2. Buscar itens similares no vector store
+            $similar_items = [];
             $max_results = $options['max_results'] ?? $this->options['max_results'] ?? 10;
             $threshold = $options['similarity_threshold'] ?? $this->options['similarity_threshold'] ?? 0.3;
+            $provider_fallback = false;
 
-            $similar_items = $this->vector_store->search(
-                $query_embedding,
-                $collection_ids,
-                $max_results * 2, // Buscar mais para filtrar depois
-                $threshold
-            );
+            if ($rag_strategy !== 'provider') {
+                $embedding_provider = $this->ai_factory->create_for_embeddings();
+                $embedding_result = $embedding_provider->generate_embedding($query);
 
-            if (is_wp_error($similar_items)) {
-                return $similar_items;
+                if (is_wp_error($embedding_result)) {
+                    if ($rag_strategy === 'hybrid') {
+                        $provider_fallback = true;
+                    } else {
+                        return $embedding_result;
+                    }
+                } else {
+                    $query_embedding = $embedding_result['embedding'];
+                    $similar_items = $this->vector_store->search(
+                        $query_embedding,
+                        $collection_ids,
+                        $max_results * 2,
+                        $threshold
+                    );
+
+                    if (is_wp_error($similar_items)) {
+                        if ($rag_strategy === 'hybrid') {
+                            $provider_fallback = true;
+                            $similar_items = [];
+                        } else {
+                            return $similar_items;
+                        }
+                    }
+                }
             }
 
-            if (empty($similar_items)) {
+            if (empty($similar_items) && $rag_strategy === 'local') {
                 return $this->build_no_results_response($query);
             }
 
-            // 3. Preparar contexto para o LLM
-            $context = $this->prepare_context($similar_items, $max_results);
+            $context = '';
+            if (!empty($similar_items)) {
+                $context = $this->prepare_context($similar_items, $max_results);
+            }
 
-            // 4. Gerar resposta com o LLM
+            // 3. Gerar resposta com o LLM
             $chat_provider = $this->ai_factory->create_from_options();
 
             $system_prompt = $this->get_system_prompt();
@@ -127,6 +140,7 @@ class SearchEngine {
                 'usage' => $ai_response['usage'],
                 'model' => $ai_response['model'],
                 'cost' => $ai_response['cost'] ?? 0,
+                'rag_strategy' => $provider_fallback ? 'provider' : $rag_strategy,
                 'response_time_ms' => $response_time,
                 'search_id' => wp_generate_uuid4(),
                 'from_cache' => false,
@@ -285,6 +299,17 @@ class SearchEngine {
      */
     private function get_system_prompt(): string {
         return $this->options['system_prompt'] ?? $this->get_default_system_prompt();
+    }
+
+    /**
+     * Obtém estratégia de RAG ativa
+     *
+     * @return string
+     */
+    private function get_rag_strategy(): string {
+        $strategy = sanitize_text_field((string) ($this->options['rag_strategy'] ?? 'local'));
+        $allowed = ['local', 'provider', 'hybrid'];
+        return in_array($strategy, $allowed, true) ? $strategy : 'local';
     }
 
     /**

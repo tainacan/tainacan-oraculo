@@ -12,6 +12,13 @@ if (!defined('ABSPATH')) exit;
 $options = \Oraculo_Tainacan\Oraculo_Tainacan::get_options();
 $factory = new \Oraculo_Tainacan\AI\AIProviderFactory();
 $providers = $factory->get_available_providers();
+$providers_by_id = [];
+foreach ($providers as $provider_data) {
+    $providers_by_id[$provider_data['id']] = $provider_data;
+}
+
+$generic_openai_chat_models = $providers_by_id['generic_openai']['models'] ?? [];
+$generic_openai_embedding_models = $providers_by_id['generic_openai']['embedding_models'] ?? [];
 $collections = \Oraculo_Tainacan\get_tainacan_collections();
 ?>
 
@@ -202,6 +209,93 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
                     </table>
                 </div>
 
+                <div class="oraculo-provider-settings" id="provider-settings-generic_openai" style="<?php echo $options['ai_provider'] === 'generic_openai' ? '' : 'display:none;'; ?>">
+                    <h3><?php esc_html_e('OpenAI Compatível (Genérico)', 'oraculo_tainacan'); ?></h3>
+                    <table class="form-table">
+                        <tr>
+                            <th><?php esc_html_e('URL Base da API', 'oraculo_tainacan'); ?></th>
+                            <td>
+                                <input type="url"
+                                       name="oraculo_tainacan_options[generic_openai_api_base_url]"
+                                       value="<?php echo esc_attr($options['generic_openai_api_base_url'] ?? ''); ?>"
+                                       class="regular-text"
+                                       placeholder="https://api.exemplo.com/v1">
+                                <button type="button" class="button oraculo-test-connection" data-provider="generic_openai">
+                                    <?php esc_html_e('Testar Conexão', 'oraculo_tainacan'); ?>
+                                </button>
+                                <p class="description">
+                                    <?php esc_html_e('Informe a URL base do endpoint compatível com OpenAI. Exemplos: https://api.openai.com/v1 ou https://host/api.', 'oraculo_tainacan'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('API Key', 'oraculo_tainacan'); ?></th>
+                            <td>
+                                <input type="password"
+                                       name="oraculo_tainacan_options[generic_openai_api_key]"
+                                       value="<?php echo !empty($options['generic_openai_api_key']) ? '••••••••' : ''; ?>"
+                                       class="regular-text">
+                                <p class="description">
+                                    <?php esc_html_e('Opcional para endpoints sem autenticação. Quando preenchida, será enviada no header Authorization: Bearer.', 'oraculo_tainacan'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Modelo de Chat', 'oraculo_tainacan'); ?></th>
+                            <td>
+                                <select name="oraculo_tainacan_options[generic_openai_model]">
+                                    <?php
+                                    $selected_generic_model = $options['generic_openai_model'] ?? '';
+                                    $available_generic_chat_ids = [];
+                                    foreach ($generic_openai_chat_models as $model):
+                                        $model_id = $model['id'] ?? '';
+                                        if ($model_id === '') {
+                                            continue;
+                                        }
+                                        $available_generic_chat_ids[] = $model_id;
+                                    ?>
+                                        <option value="<?php echo esc_attr($model_id); ?>" <?php selected($selected_generic_model, $model_id); ?>>
+                                            <?php echo esc_html($model['name'] ?? $model_id); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                    <?php if ($selected_generic_model !== '' && !in_array($selected_generic_model, $available_generic_chat_ids, true)): ?>
+                                        <option value="<?php echo esc_attr($selected_generic_model); ?>" selected>
+                                            <?php echo esc_html($selected_generic_model); ?>
+                                        </option>
+                                    <?php endif; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th><?php esc_html_e('Modelo de Embedding', 'oraculo_tainacan'); ?></th>
+                            <td>
+                                <select name="oraculo_tainacan_options[generic_openai_embedding_model]">
+                                    <option value=""><?php esc_html_e('Selecione um modelo de embedding', 'oraculo_tainacan'); ?></option>
+                                    <?php
+                                    $selected_generic_embedding = $options['generic_openai_embedding_model'] ?? '';
+                                    $available_generic_embedding_ids = [];
+                                    foreach ($generic_openai_embedding_models as $model):
+                                        $model_id = $model['id'] ?? '';
+                                        if ($model_id === '') {
+                                            continue;
+                                        }
+                                        $available_generic_embedding_ids[] = $model_id;
+                                    ?>
+                                        <option value="<?php echo esc_attr($model_id); ?>" <?php selected($selected_generic_embedding, $model_id); ?>>
+                                            <?php echo esc_html($model['name'] ?? $model_id); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                    <?php if ($selected_generic_embedding !== '' && !in_array($selected_generic_embedding, $available_generic_embedding_ids, true)): ?>
+                                        <option value="<?php echo esc_attr($selected_generic_embedding); ?>" selected>
+                                            <?php echo esc_html($selected_generic_embedding); ?>
+                                        </option>
+                                    <?php endif; ?>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
                 <!-- Adicione configurações similares para outros provedores... -->
             </div>
 
@@ -263,6 +357,22 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
                                    name="oraculo_tainacan_options[max_results]"
                                    value="<?php echo esc_attr($options['max_results'] ?? 10); ?>"
                                    min="1" max="50">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php esc_html_e('Estratégia de RAG', 'oraculo_tainacan'); ?></th>
+                        <td>
+                            <select name="oraculo_tainacan_options[rag_strategy]">
+                                <option value="local" <?php selected($options['rag_strategy'] ?? 'local', 'local'); ?>>
+                                    <?php esc_html_e('Local (embeddings do Oráculo)', 'oraculo_tainacan'); ?>
+                                </option>
+                                <option value="provider" <?php selected($options['rag_strategy'] ?? 'local', 'provider'); ?>>
+                                    <?php esc_html_e('Provedor (sem recuperação local)', 'oraculo_tainacan'); ?>
+                                </option>
+                                <option value="hybrid" <?php selected($options['rag_strategy'] ?? 'local', 'hybrid'); ?>>
+                                    <?php esc_html_e('Híbrido (local com fallback para provedor)', 'oraculo_tainacan'); ?>
+                                </option>
+                            </select>
                         </td>
                     </tr>
                     <tr>

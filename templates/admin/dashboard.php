@@ -233,6 +233,7 @@ $base_url = admin_url('admin.php?page=oraculo_tainacan_page');
                                 'ollama' => 'Ollama (Local)',
                                 'groq' => 'Groq',
                                 'claude' => 'Claude (Anthropic)',
+                                'generic_openai' => 'OpenAI Compatível (Genérico)',
                             ];
                             echo esc_html($providers[$options['ai_provider'] ?? 'openai'] ?? 'Não configurado');
                             ?>

@@ -13,6 +13,7 @@ use Oraculo_Tainacan\AI\Providers\DeepSeekProvider;
 use Oraculo_Tainacan\AI\Providers\OllamaProvider;
 use Oraculo_Tainacan\AI\Providers\GroqProvider;
 use Oraculo_Tainacan\AI\Providers\ClaudeProvider;
+use Oraculo_Tainacan\AI\Providers\GenericOpenAIProvider;
 
 /**
  * Factory para instanciar provedores de IA
@@ -30,6 +31,7 @@ class AIProviderFactory {
         'ollama' => OllamaProvider::class,
         'groq' => GroqProvider::class,
         'claude' => ClaudeProvider::class,
+        'generic_openai' => GenericOpenAIProvider::class,
     ];
 
     /**
@@ -90,26 +92,24 @@ class AIProviderFactory {
         $options = \Oraculo_Tainacan\Oraculo_Tainacan::get_options();
         $provider_id = $options['ai_provider'] ?? 'openai';
 
-        // Provedores que suportam embeddings
-        $embedding_providers = ['openai', 'ollama'];
-
-        if (!in_array($provider_id, $embedding_providers)) {
-            // Fallback para OpenAI se o provedor atual não suporta embeddings
-            if (!empty($options['openai_api_key'])) {
-                return $this->create('openai');
-            }
-
-            // Fallback para Ollama local
-            if (!empty($options['ollama_url'])) {
-                return $this->create('ollama');
-            }
-
-            throw new \RuntimeException(
-                esc_html__( 'Nenhum provedor configurado suporta geração de embeddings. Configure OpenAI ou Ollama.', 'oraculo_tainacan' )
-            );
+        $current_provider = $this->create($provider_id);
+        if ($current_provider->supports_embeddings()) {
+            return $current_provider;
         }
 
-        return $this->create($provider_id);
+        // Fallback para OpenAI
+        if (!empty($options['openai_api_key'])) {
+            return $this->create('openai');
+        }
+
+        // Fallback para Ollama local
+        if (!empty($options['ollama_url'])) {
+            return $this->create('ollama');
+        }
+
+        throw new \RuntimeException(
+            esc_html__( 'Nenhum provedor configurado suporta geração de embeddings. Configure OpenAI, Ollama ou um provedor compatível.', 'oraculo_tainacan' )
+        );
     }
 
     /**
@@ -171,6 +171,14 @@ class AIProviderFactory {
                     'model' => $options['claude_model'] ?? 'claude-3-5-sonnet-latest',
                 ]);
 
+            case 'generic_openai':
+                return array_merge($common, [
+                    'api_base_url' => $options['generic_openai_api_base_url'] ?? '',
+                    'api_key' => $options['generic_openai_api_key'] ?? '',
+                    'model' => $options['generic_openai_model'] ?? '',
+                    'embedding_model' => $options['generic_openai_embedding_model'] ?? '',
+                ]);
+
             default:
                 return $common;
         }
@@ -186,7 +194,7 @@ class AIProviderFactory {
 
         foreach (self::$providers as $id => $class) {
             try {
-                $instance = new $class([]);
+                $instance = new $class($this->get_provider_options($id));
                 $providers[] = [
                     'id' => $instance->get_id(),
                     'name' => $instance->get_name(),
@@ -227,6 +235,8 @@ class AIProviderFactory {
                 return !empty($options['groq_api_key']);
             case 'claude':
                 return !empty($options['claude_api_key']);
+            case 'generic_openai':
+                return !empty($options['generic_openai_api_base_url']);
             default:
                 return false;
         }
