@@ -238,7 +238,7 @@ class AdminPage {
         // Remover chaves sensíveis
         $sensitive_keys = [
             'openai_api_key', 'gemini_api_key', 'deepseek_api_key',
-            'groq_api_key', 'claude_api_key'
+            'groq_api_key', 'claude_api_key', 'generic_openai_api_key'
         ];
 
         foreach ($sensitive_keys as $key) {
@@ -298,7 +298,7 @@ class AdminPage {
         // API Keys - só atualizar se não for placeholder
         $api_keys = [
             'openai_api_key', 'gemini_api_key', 'deepseek_api_key',
-            'groq_api_key', 'claude_api_key'
+            'groq_api_key', 'claude_api_key', 'generic_openai_api_key'
         ];
 
         $current_options = \Oraculo_Tainacan\Oraculo_Tainacan::get_options();
@@ -319,8 +319,14 @@ class AdminPage {
         $sanitized['ollama_url'] = esc_url_raw($input['ollama_url'] ?? 'http://localhost:11434');
         $sanitized['ollama_model'] = sanitize_text_field($input['ollama_model'] ?? 'llama3.2');
         $sanitized['ollama_embedding_model'] = sanitize_text_field($input['ollama_embedding_model'] ?? 'nomic-embed-text');
+        $sanitized['generic_openai_api_base_url'] = esc_url_raw($input['generic_openai_api_base_url'] ?? '');
+        $sanitized['generic_openai_model'] = sanitize_text_field($input['generic_openai_model'] ?? '');
+        $sanitized['generic_openai_embedding_model'] = sanitize_text_field($input['generic_openai_embedding_model'] ?? '');
         $sanitized['groq_model'] = sanitize_text_field($input['groq_model'] ?? 'llama-3.3-70b-versatile');
         $sanitized['claude_model'] = sanitize_text_field($input['claude_model'] ?? 'claude-3-5-sonnet-latest');
+        $allowed_rag_strategies = ['local', 'provider', 'hybrid'];
+        $rag_strategy = sanitize_text_field($input['rag_strategy'] ?? 'local');
+        $sanitized['rag_strategy'] = in_array($rag_strategy, $allowed_rag_strategies, true) ? $rag_strategy : 'local';
 
         // Parâmetros numéricos
         $sanitized['max_tokens'] = absint($input['max_tokens'] ?? 2000);

@@ -336,7 +336,7 @@ class Oraculo_Page extends \Tainacan\Pages {
         // Remover chaves sensíveis
         $sensitive_keys = [
             'openai_api_key', 'gemini_api_key', 'deepseek_api_key',
-            'groq_api_key', 'claude_api_key'
+            'groq_api_key', 'claude_api_key', 'generic_openai_api_key'
         ];
 
         foreach ($sensitive_keys as $key) {

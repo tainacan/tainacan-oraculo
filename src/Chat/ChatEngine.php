@@ -93,8 +93,9 @@ class ChatEngine {
             // Buscar contexto relevante no acervo
             $context = '';
             $sources = [];
+            $rag_strategy = $this->get_rag_strategy();
 
-            if ($this->should_search_context($message, $history)) {
+            if ($rag_strategy !== 'provider' && $this->should_search_context($message, $history)) {
                 $search_results = $this->search_engine->semantic_search($message, $collection_ids, 5);
 
                 if (!is_wp_error($search_results) && !empty($search_results)) {
@@ -141,6 +142,7 @@ class ChatEngine {
                 'sources' => $this->format_sources_for_response($sources),
                 'usage' => $ai_response['usage'],
                 'model' => $ai_response['model'],
+                'rag_strategy' => $rag_strategy,
                 'cost' => $ai_response['cost'] ?? 0,
                 'response_time_ms' => $response_time,
             ];
@@ -317,6 +319,17 @@ class ChatEngine {
         $significant_words = array_filter($words, fn($w) => strlen($w) > 3);
 
         return count($significant_words) > 3;
+    }
+
+    /**
+     * Obtém estratégia de RAG ativa
+     *
+     * @return string
+     */
+    private function get_rag_strategy(): string {
+        $strategy = sanitize_text_field((string) ($this->options['rag_strategy'] ?? 'local'));
+        $allowed = ['local', 'provider', 'hybrid'];
+        return in_array($strategy, $allowed, true) ? $strategy : 'local';
     }
 
     /**

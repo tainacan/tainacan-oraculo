@@ -445,6 +445,11 @@ final class Oraculo_Tainacan {
             'ollama_url' => 'http://localhost:11434',
             'ollama_model' => 'llama3.2',
             'ollama_embedding_model' => 'nomic-embed-text',
+            'generic_openai_api_base_url' => '',
+            'generic_openai_api_key' => '',
+            'generic_openai_model' => '',
+            'generic_openai_embedding_model' => '',
+            'rag_strategy' => 'local',
             'max_tokens' => 2000,
             'temperature' => 0.7,
             'similarity_threshold' => 0.3,
@@ -581,7 +586,7 @@ Responda de forma natural e conversacional, sempre baseando-se nas informações
         $existing_options = get_option('oraculo_tainacan_options', []);
 
         // Sanitização de API keys - preservar se for placeholder
-        $api_keys = ['openai_api_key', 'gemini_api_key', 'deepseek_api_key', 'anthropic_api_key'];
+        $api_keys = ['openai_api_key', 'gemini_api_key', 'deepseek_api_key', 'anthropic_api_key', 'groq_api_key', 'claude_api_key', 'generic_openai_api_key'];
         foreach ($api_keys as $key) {
             if (isset($options[$key])) {
                 $value = sanitize_text_field($options[$key]);
@@ -609,6 +614,20 @@ Responda de forma natural e conversacional, sempre baseando-se nas informações
         if (isset($options['similarity_threshold'])) {
             $options['similarity_threshold'] = floatval($options['similarity_threshold']);
             $options['similarity_threshold'] = max(0, min(1, $options['similarity_threshold']));
+        }
+        if (isset($options['generic_openai_api_base_url'])) {
+            $options['generic_openai_api_base_url'] = esc_url_raw($options['generic_openai_api_base_url']);
+        }
+        if (isset($options['generic_openai_model'])) {
+            $options['generic_openai_model'] = sanitize_text_field($options['generic_openai_model']);
+        }
+        if (isset($options['generic_openai_embedding_model'])) {
+            $options['generic_openai_embedding_model'] = sanitize_text_field($options['generic_openai_embedding_model']);
+        }
+        if (isset($options['rag_strategy'])) {
+            $allowed_strategies = ['local', 'provider', 'hybrid'];
+            $rag_strategy = sanitize_text_field($options['rag_strategy']);
+            $options['rag_strategy'] = in_array($rag_strategy, $allowed_strategies, true) ? $rag_strategy : 'local';
         }
 
         return $options;
