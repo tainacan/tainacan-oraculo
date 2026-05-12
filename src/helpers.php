@@ -39,6 +39,19 @@ function is_debug_mode(): bool {
 }
 
 /**
+ * Detecta ambiente de execução do WordPress
+ *
+ * @return string
+ */
+function detect_environment(): string {
+    if (function_exists('wp_get_environment_type')) {
+        return sanitize_text_field(wp_get_environment_type());
+    }
+
+    return 'production';
+}
+
+/**
  * Loga mensagem se debug estiver ativo
  *
  * @param string $message
