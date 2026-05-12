@@ -449,9 +449,12 @@ abstract class AbstractAIProvider implements AIProviderInterface {
      */
     protected function prepare_options(array $options): array {
         $plugin_options = \Oraculo_Tainacan\Oraculo_Tainacan::get_options();
+        $configured_model = trim((string) $this->get_config('model', ''));
+        $first_listed_model = $this->get_available_models()[0]['id'] ?? '';
+        $default_model = $configured_model !== '' ? $configured_model : $first_listed_model;
 
         return array_merge([
-            'model' => $this->get_available_models()[0]['id'] ?? '',
+            'model' => $default_model,
             'max_tokens' => $plugin_options['max_tokens'] ?? 2000,
             'temperature' => $plugin_options['temperature'] ?? 0.7,
         ], $options);
