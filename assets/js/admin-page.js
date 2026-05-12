@@ -108,10 +108,31 @@
         },
 
         initProviderCards: function() {
-            $('.oraculo-provider-card input[type="radio"]').on('change', function() {
+            var applySelection = function(provider, card) {
+                $('.oraculo-provider-card').removeClass('selected');
+                card.addClass('selected');
+                $('.oraculo-provider-settings').hide();
+                var panel = $('#provider-settings-' + provider);
+                if (panel.length) {
+                    panel.show();
+                }
+            };
+
+            $(document).on('change', '.oraculo-provider-card input[type="radio"]', function() {
                 var card = $(this).closest('.oraculo-provider-card');
-                card.siblings().removeClass('active');
-                card.addClass('active');
+                applySelection($(this).val(), card);
+            });
+
+            $(document).on('click', '.oraculo-providers-grid .oraculo-provider-card', function() {
+                var card = $(this);
+                var radio = card.find('input[type="radio"]');
+
+                if (!radio.prop('checked')) {
+                    radio.prop('checked', true).trigger('change');
+                    return;
+                }
+
+                applySelection(radio.val(), card);
             });
         },
 

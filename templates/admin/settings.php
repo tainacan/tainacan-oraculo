@@ -51,24 +51,26 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
                     <div class="oraculo-provider-card <?php echo $options['ai_provider'] === $provider['id'] ? 'selected' : ''; ?>"
                          data-provider="<?php echo esc_attr($provider['id']); ?>">
                         <label class="oraculo-provider-label">
-                            <input type="radio"
-                                   name="oraculo_tainacan_options[ai_provider]"
-                                   value="<?php echo esc_attr($provider['id']); ?>"
-                                   <?php checked($options['ai_provider'], $provider['id']); ?>>
-                            <span class="oraculo-provider-name"><?php echo esc_html($provider['name']); ?></span>
-                            <?php if ($provider['is_configured']): ?>
-                                <span class="oraculo-provider-badge configured"><?php esc_html_e('Configurado', 'oraculo_tainacan'); ?></span>
-                            <?php endif; ?>
+                            <span class="oraculo-provider-label-row">
+                                <input type="radio"
+                                       name="oraculo_tainacan_options[ai_provider]"
+                                       value="<?php echo esc_attr($provider['id']); ?>"
+                                       <?php checked($options['ai_provider'], $provider['id']); ?>>
+                                <span class="oraculo-provider-name"><?php echo esc_html($provider['name']); ?></span>
+                                <?php if ($provider['is_configured']): ?>
+                                    <span class="oraculo-provider-badge configured"><?php esc_html_e('Configurado', 'oraculo_tainacan'); ?></span>
+                                <?php endif; ?>
+                            </span>
+                            <p class="oraculo-provider-description"><?php echo esc_html($provider['description']); ?></p>
+                            <span class="oraculo-provider-features">
+                                <?php if ($provider['supports_embeddings']): ?>
+                                    <span class="feature">📊 Embeddings</span>
+                                <?php endif; ?>
+                                <?php if ($provider['supports_streaming']): ?>
+                                    <span class="feature">⚡ Streaming</span>
+                                <?php endif; ?>
+                            </span>
                         </label>
-                        <p class="oraculo-provider-description"><?php echo esc_html($provider['description']); ?></p>
-                        <div class="oraculo-provider-features">
-                            <?php if ($provider['supports_embeddings']): ?>
-                                <span class="feature">📊 Embeddings</span>
-                            <?php endif; ?>
-                            <?php if ($provider['supports_streaming']): ?>
-                                <span class="feature">⚡ Streaming</span>
-                            <?php endif; ?>
-                        </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -490,12 +492,30 @@ jQuery(document).ready(function($) {
     });
 
     // Provider selection
+    function oraculoApplyProviderSelection(provider, card) {
+        $('.oraculo-provider-card').removeClass('selected');
+        card.addClass('selected');
+        $('.oraculo-provider-settings').hide();
+        var panel = $('#provider-settings-' + provider);
+        if (panel.length) {
+            panel.show();
+        }
+    }
+
     $('.oraculo-provider-card input[type="radio"]').on('change', function() {
         var provider = $(this).val();
-        $('.oraculo-provider-card').removeClass('selected');
-        $(this).closest('.oraculo-provider-card').addClass('selected');
-        $('.oraculo-provider-settings').hide();
-        $('#provider-settings-' + provider).show();
+        var card = $(this).closest('.oraculo-provider-card');
+        oraculoApplyProviderSelection(provider, card);
+    });
+
+    $('.oraculo-providers-grid').on('click', '.oraculo-provider-card', function() {
+        var card = $(this);
+        var radio = card.find('input[type="radio"]');
+        if (!radio.prop('checked')) {
+            radio.prop('checked', true).trigger('change');
+            return;
+        }
+        oraculoApplyProviderSelection(radio.val(), card);
     });
 
     // Sliders
