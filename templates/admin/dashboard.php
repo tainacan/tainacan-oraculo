@@ -234,12 +234,13 @@ $base_url = admin_url( 'admin.php?page=oraculo_tainacan_page' );
 						<span class="oraculo-config-value">
 							<?php
 							$providers = array(
-								'openai'   => 'OpenAI (ChatGPT)',
-								'gemini'   => 'Google Gemini',
-								'deepseek' => 'DeepSeek',
-								'ollama'   => 'Ollama (Local)',
-								'groq'     => 'Groq',
-								'claude'   => 'Claude (Anthropic)',
+								'openai'         => 'OpenAI (ChatGPT)',
+								'gemini'         => 'Google Gemini',
+								'deepseek'       => 'DeepSeek',
+								'ollama'         => 'Ollama (Local)',
+								'groq'           => 'Groq',
+								'claude'         => 'Claude (Anthropic)',
+								'generic_openai' => 'OpenAI Compatível (Genérico)',
 							);
 							echo esc_html( $providers[ $options['ai_provider'] ?? 'openai' ] ?? 'Não configurado' );
 							?>

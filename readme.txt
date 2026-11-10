@@ -4,7 +4,7 @@ Tags: tainacan, ai, search, rag, openai
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.0
-Stable tag: 2.13.1
+Stable tag: 2.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -111,6 +111,10 @@ OpenAI is the most tested option. Ollama is recommended for fully local, private
 Only the text content of your archived items is sent to the AI provider you configure. When using Ollama, everything stays local.
 
 == Changelog ==
+
+= 2.14.0 =
+* New provider "OpenAI Compatível (Genérico)": any server that speaks the OpenAI API (Open WebUI, LiteLLM, vLLM, LocalAI, Ollama's /v1, institutional gateways) with its own base URL and an optional API key (encrypted like the others). Models are discovered from the server's /models ("Testar Conexão" or "Buscar modelos") and split into chat and embedding suggestions; the list is cached and never fetched just by opening an admin screen. It can also generate the embeddings (Indexação tab). When the base URL ends in /api (Open WebUI) and /embeddings is missing, embeddings go through Open WebUI's Ollama proxy. Ported from Mateus Luna's contribution (tainacan/tainacan-oraculo#4)
+* New "Estratégia de RAG" setting (Geral tab): Local (default, as before: the answer uses the items found in the Oráculo vectors), Provedor (no local retrieval: the question goes straight to the model, for providers that already consult the collection, e.g. Open WebUI with a knowledge base; no item cards) and Híbrido (local, but if the embedding or the vector search fails the search answers with the provider alone instead of an error; that answer is not cached). The strategy is part of the search and BIA cache keys. Without context, the search sends the plain question instead of the "items listed below" prompt. Also from tainacan/tainacan-oraculo#4
 
 = 2.13.1 =
 * Manual: new page "Servidor para um acervo de 100 mil itens" with the recommended VM (4 vCPU, 8 GB, NVMe, MariaDB 11.7+, 16 Oráculo PHP processes) and projected times. Documentation only; no code changes

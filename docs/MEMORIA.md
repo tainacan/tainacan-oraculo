@@ -1,7 +1,7 @@
 # Memória do projeto (decisões, armadilhas, pendências)
 
 > Para retomar o trabalho em outra máquina ou instância. Complementa o
-> [CONTEXT.md](CONTEXT.md), que descreve a arquitetura. Atualizado em 29/10/2026 (versão 2.13.0).
+> [CONTEXT.md](CONTEXT.md), que descreve a arquitetura. Atualizado em 10/11/2026 (versão 2.14.0).
 > Endereços, credenciais e comandos de servidor ficam no repositório privado de infraestrutura,
 > não aqui (este repositório é público).
 
@@ -12,8 +12,27 @@
 - Instalado em dois sites de teste: o do TainacanBiblio (sem busca em documentos; 2.13.0) e o
   laboratório de OCR, que tem a coleção "OCR — documentos digitalizados (laboratório)" (fica na
   2.10.2 por decisão do Marcos; o deploy pelo mapa publica nos dois — voltar o laboratório depois).
+- **Repositório oficial (público): `tainacan/tainacan-oraculo`.** Em 10/11/2026 a `main` dele
+  estava parada em `ad057c0` (08/05/2026), ancestral direta desta `main`. Branches enviados lá:
+  `release/2.13.1` (cópia exata da `main` daqui) e `release/2.14.0` (2.13.1 + PR #4 do Mateus
+  portado). Plano: PR `release/2.14.0` → `main` lá, por merge commit ou rebase (nunca squash, para as
+  duas histórias continuarem batendo), e depois decidir qual repositório vira o de trabalho.
 
 ## Linha do tempo das decisões
+
+- **2.14.0 (10/11/2026), PRs do Mateus Luna no repositório oficial.** Dos quatro PRs abertos em
+  `tainacan/tainacan-oraculo` (12/05/2026), #1 (`detect_environment()` da aba de depuração), #2
+  (clique no cartão do provedor, resolvido na 2.5.0) e #3 (modelo configurado ignorado) já estavam
+  resolvidos aqui por outro caminho. O #4 (provedor OpenAI genérico + estratégia de RAG) foi portado:
+  `GenericOpenAIProvider` mantém a lógica dele (descoberta em /models, detecção de modelo de
+  embedding por tipo/capacidade/nome, fallback `/ollama/api/embed` do Open WebUI), com três
+  mudanças: (1) **a lista de modelos só lê cache** — `get_available_providers()` monta todos os
+  provedores em várias telas, e no PR original isso consultava /models a cada carregamento (com o
+  servidor fora do ar, cada tela esperaria o timeout; falha não era cacheada); o cache é preenchido
+  por "Testar Conexão"/"Buscar modelos"; (2) a busca em duas etapas: sem itens (provedor, ou híbrido
+  que falhou) a etapa `items` já devolve a resposta inteira, senão o front mostraria "nada
+  encontrado"; (3) sem contexto, a busca manda a pergunta pura, não o prompt "itens listados
+  abaixo". Testado só com servidor falso (`php -S`, 13 verificações), **não no laboratório**.
 
 - **2.7.x (22/10/2026), velocidade e layout.** Busca vetorial em duas fases: assinatura binária
   (`embedding_bits`, Hamming) seleciona candidatos e só eles recebem o cosseno exato (20× o limite,
@@ -90,6 +109,11 @@
 - **Página citada** é a do PDF; livros com numeração impressa própria podem diferir.
 
 ## Pendências
+
+- **2.14.0 (10/11/2026)**: testar no laboratório com um servidor compatível real (Open WebUI ou o
+  /v1 do Ollama): salvar URL, "Testar Conexão", "Buscar modelos", busca nas três estratégias, BIA
+  com "provedor", e indexar com o genérico como provedor de embeddings. Depois, abrir o PR no
+  repositório oficial, marcar o Mateus para revisão e fechar os PRs #1–#4 lá com comentário.
 
 - **2.13.0 (29/10/2026)**: Gemini (Flash-Lite) não entrou na comparação de modelos por falta de
   chave; o teste de carga em `docs/manual` é reproduzível com o mesmo cenário.

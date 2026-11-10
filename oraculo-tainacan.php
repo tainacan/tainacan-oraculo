@@ -3,7 +3,7 @@
  * Plugin Name: Oráculo Tainacan
  * Plugin URI: https://github.com/tainacan/oraculo-tainacan
  * Description: Sistema avançado de busca em linguagem natural com IA para acervos Tainacan. Integra RAG (Retrieval-Augmented Generation) com múltiplos provedores de IA.
- * Version: 2.13.1
+ * Version: 2.14.0
  * Author: Tainacan Community
  * Author URI: https://tainacan.org
  * License: GPL-2.0+
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Constantes do plugin
-define( 'ORACULO_TAINACAN_VERSION', '2.13.1' );
+define( 'ORACULO_TAINACAN_VERSION', '2.14.0' );
 define( 'ORACULO_TAINACAN_FILE', __FILE__ );
 define( 'ORACULO_TAINACAN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ORACULO_TAINACAN_URL', plugin_dir_url( __FILE__ ) );
@@ -493,61 +493,66 @@ final class Oraculo_Tainacan {
 	 */
 	private function set_default_options(): void {
 		$defaults = array(
-			'ai_provider'            => 'openai',
-			'openai_api_key'         => '',
-			'openai_model'           => 'gpt-4.1-mini',
-			'openai_embedding_model' => 'text-embedding-3-small',
-			'gemini_api_key'         => '',
-			'gemini_model'           => 'gemini-2.5-flash',
-			'claude_api_key'         => '',
-			'claude_model'           => 'claude-sonnet-5',
-			'groq_api_key'           => '',
-			'groq_model'             => 'llama-3.3-70b-versatile',
-			'deepseek_api_key'       => '',
-			'deepseek_model'         => 'deepseek-chat',
-			'ollama_url'             => 'http://localhost:11434',
-			'ollama_model'           => 'llama3.2',
-			'ollama_embedding_model' => 'nomic-embed-text',
-			'max_tokens'             => 2000,
-			'temperature'            => 0.7,
-			'similarity_threshold'   => 0.3,
-			'max_results'            => 10,
-			'batch_size'             => 25,
-			'request_timeout'        => 120,
-			'cache_duration'         => 3600,
-			'rate_limit_global'      => 300,
-			'rate_limit_search'      => 10,
-			'rate_limit_chat'        => 20,
-			'rate_limit_allowlist'   => '',
-			'enable_chat'            => true,
-			'enable_search'          => true,
-			'enable_analytics'       => true,
-			'enable_feedback'        => true,
-			'debug_mode'             => false,
-			'default_collections'    => array(),
-			'system_prompt'          => $this->get_default_system_prompt(),
-			'search_prompt'          => $this->get_default_search_prompt(),
-			'chat_prompt'            => $this->get_default_chat_prompt(),
-			'welcome_message'        => __( 'Oi! Eu sou a BIA, a bibliotecária de IA deste acervo. Posso ajudar a encontrar obras, autores e assuntos — é só perguntar. 📚', 'oraculo-tainacan' ),
-			'suggested_questions'    => array(
+			'ai_provider'                    => 'openai',
+			'openai_api_key'                 => '',
+			'openai_model'                   => 'gpt-4.1-mini',
+			'openai_embedding_model'         => 'text-embedding-3-small',
+			'gemini_api_key'                 => '',
+			'gemini_model'                   => 'gemini-2.5-flash',
+			'claude_api_key'                 => '',
+			'claude_model'                   => 'claude-sonnet-5',
+			'groq_api_key'                   => '',
+			'groq_model'                     => 'llama-3.3-70b-versatile',
+			'deepseek_api_key'               => '',
+			'deepseek_model'                 => 'deepseek-chat',
+			'ollama_url'                     => 'http://localhost:11434',
+			'ollama_model'                   => 'llama3.2',
+			'ollama_embedding_model'         => 'nomic-embed-text',
+			'generic_openai_api_base_url'    => '',
+			'generic_openai_api_key'         => '',
+			'generic_openai_model'           => '',
+			'generic_openai_embedding_model' => '',
+			'rag_strategy'                   => 'local',
+			'max_tokens'                     => 2000,
+			'temperature'                    => 0.7,
+			'similarity_threshold'           => 0.3,
+			'max_results'                    => 10,
+			'batch_size'                     => 25,
+			'request_timeout'                => 120,
+			'cache_duration'                 => 3600,
+			'rate_limit_global'              => 300,
+			'rate_limit_search'              => 10,
+			'rate_limit_chat'                => 20,
+			'rate_limit_allowlist'           => '',
+			'enable_chat'                    => true,
+			'enable_search'                  => true,
+			'enable_analytics'               => true,
+			'enable_feedback'                => true,
+			'debug_mode'                     => false,
+			'default_collections'            => array(),
+			'system_prompt'                  => $this->get_default_system_prompt(),
+			'search_prompt'                  => $this->get_default_search_prompt(),
+			'chat_prompt'                    => $this->get_default_chat_prompt(),
+			'welcome_message'                => __( 'Oi! Eu sou a BIA, a bibliotecária de IA deste acervo. Posso ajudar a encontrar obras, autores e assuntos — é só perguntar. 📚', 'oraculo-tainacan' ),
+			'suggested_questions'            => array(
 				__( 'Quais são os itens mais recentes do acervo?', 'oraculo-tainacan' ),
 				__( 'Mostre documentos sobre [tema]', 'oraculo-tainacan' ),
 				__( 'Quais coleções estão disponíveis?', 'oraculo-tainacan' ),
 			),
-			'index_fields'           => array( 'title', 'description' ),
+			'index_fields'                   => array( 'title', 'description' ),
 			// Busca visual via AI API do IBRAM (CLIP + pgvector). URL vazia = desligado.
-			'search_backend'         => 'local',
-			'clip_api_url'           => '',
-			'clip_api_model'         => 'ViT-L-14',
-			'clip_api_timeout'       => 60,
-			'appearance'             => array(
+			'search_backend'                 => 'local',
+			'clip_api_url'                   => '',
+			'clip_api_model'                 => 'ViT-L-14',
+			'clip_api_timeout'               => 60,
+			'appearance'                     => array(
 				'primary_color'   => '#1f2f56',
 				'accent_color'    => '#b5e0e3',
 				'chat_position'   => 'bottom-right',
 				'show_sources'    => true,
 				'show_similarity' => false,
 			),
-			'theme_integration'      => Frontend\ThemeIntegration::get_default_settings(),
+			'theme_integration'              => Frontend\ThemeIntegration::get_default_settings(),
 		);
 
 		$existing = get_option( 'oraculo_tainacan_options', array() );
@@ -1012,6 +1017,12 @@ Responda de forma natural e conversacional, sempre baseando-se nas informações
 			// sozinho se estiver no formato 'enc:...'); valor digitado vai como
 			// texto puro mesmo, pois ainda não foi persistido nem criptografado.
 			$config['api_key'] = $is_mask ? (string) ( $current[ $provider_id . '_api_key' ] ?? '' ) : $submitted;
+
+			// Compatível com OpenAI: URL e chave (opcional) juntas; a URL
+			// digitada no painel também chega via ollama_url.
+			if ( 'generic_openai' === $provider_id ) {
+				$config['api_base_url'] = '' !== $ollama_url ? $ollama_url : (string) ( $current['generic_openai_api_base_url'] ?? '' );
+			}
 		}
 
 		try {

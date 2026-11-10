@@ -110,18 +110,35 @@ class SearchEngine {
 				$items_ms      = (int) $stored['ms'];
 			}
 
-			if ( empty( $similar_items ) ) {
+			// Estratégia de RAG (contribuição de Mateus Luna, tainacan-oraculo#4):
+			// 'provider' não consulta os vetores; 'hybrid' segue sem contexto
+			// quando o embedding ou a busca vetorial falham.
+			$rag_strategy = $this->get_rag_strategy();
+			$rag_used     = $rag_strategy;
+
+			if ( empty( $similar_items ) && 'provider' !== $rag_strategy ) {
 				$similar_items = $this->retrieve( $query, $collection_ids, $max_results, $threshold );
 				if ( is_wp_error( $similar_items ) ) {
-					return $similar_items;
+					if ( 'hybrid' !== $rag_strategy ) {
+						return $similar_items;
+					}
+					\Oraculo_Tainacan\debug_log( 'Hybrid RAG: retrieval failed, answering without context: ' . $similar_items->get_error_message(), null, 'warning' );
+					$similar_items = array();
 				}
 			}
+			$similar_items = (array) $similar_items;
 
 			if ( empty( $similar_items ) ) {
-				return $this->build_no_results_response( $query );
+				if ( 'local' === $rag_strategy ) {
+					return $this->build_no_results_response( $query );
+				}
+				$rag_used = 'provider';
 			}
 
-			if ( 'items' === $phase ) {
+			// Sem itens não há cartões para mostrar primeiro: a etapa 'items'
+			// já devolve a resposta inteira (o front-end trata resposta pronta
+			// na primeira etapa como busca concluída).
+			if ( 'items' === $phase && ! empty( $similar_items ) ) {
 				$items_ms = (int) round( ( microtime( true ) - $start_time ) * 1000 );
 
 				return array(
@@ -139,7 +156,7 @@ class SearchEngine {
 			}
 
 			// 3. Preparar contexto para o LLM
-			$context = $this->prepare_context( $similar_items, $max_results );
+			$context = empty( $similar_items ) ? '' : $this->prepare_context( $similar_items, $max_results );
 
 			// 4. Gerar resposta com o LLM
 			$chat_provider = $this->ai_factory->create_from_options();
@@ -148,7 +165,7 @@ class SearchEngine {
 			$search_prompt = $this->build_search_prompt( $query, $context );
 			// As regras de citação [n] pressupõem os cartões dos itens na tela;
 			// com as fontes ocultas, o texto é o único caminho até os itens.
-			if ( ! empty( $this->options['appearance']['show_sources'] ?? true ) ) {
+			if ( ! empty( $similar_items ) && ! empty( $this->options['appearance']['show_sources'] ?? true ) ) {
 				$search_prompt .= "\n\n" . $this->get_answer_format_rules();
 			}
 
@@ -182,12 +199,18 @@ class SearchEngine {
 				'usage'            => $ai_response['usage'],
 				'model'            => $ai_response['model'],
 				'cost'             => $ai_response['cost'] ?? 0,
+				'rag_strategy'     => $rag_used,
 				'response_time_ms' => $response_time,
 				'search_id'        => wp_generate_uuid4(),
 				'from_cache'       => false,
 			);
 
-			// Salvar no cache
+			// Salvar no cache (o híbrido que caiu para o provedor por falha não
+			// fica guardado: a próxima busca deve tentar o acervo de novo).
+			if ( 'hybrid' === $rag_strategy && 'provider' === $rag_used ) {
+				$this->log_search( $result, $collection_ids );
+				return $result;
+			}
 			$cache_duration = $this->options['cache_duration'] ?? 3600;
 			set_transient( $cache_key, $result, $cache_duration );
 
@@ -383,6 +406,12 @@ Se a pergunta não puder ser respondida com as informações disponíveis, infor
 	 * @return string
 	 */
 	private function build_search_prompt( string $query, string $context ): string {
+		// Sem contexto (RAG pelo provedor): o modelo de "itens listados
+		// abaixo" faria o provedor responder que não há itens.
+		if ( '' === $context ) {
+			return $query;
+		}
+
 		$template = $this->options['search_prompt'] ?? $this->get_default_search_prompt();
 
 		return str_replace(
@@ -657,6 +686,16 @@ Forneça uma resposta clara, mencionando os itens mais relevantes encontrados.',
 	}
 
 	/**
+	 * Estratégia de RAG configurada: local, provider ou hybrid
+	 *
+	 * @return string
+	 */
+	private function get_rag_strategy(): string {
+		$strategy = (string) ( $this->options['rag_strategy'] ?? 'local' );
+		return in_array( $strategy, array( 'local', 'provider', 'hybrid' ), true ) ? $strategy : 'local';
+	}
+
+	/**
 	 * Gera chave de cache
 	 *
 	 * @param string $query
@@ -672,6 +711,7 @@ Forneça uma resposta clara, mencionando os itens mais relevantes encontrados.',
 			// configurações não pode servir resultado do outro backend.
 			'backend'     => $this->options['search_backend'] ?? 'local',
 			'clip_model'  => $this->options['clip_api_model'] ?? '',
+			'rag'         => $this->get_rag_strategy(),
 			// Versão do índice: qualquer escrita de vetor a incrementa, aposentando
 			// as chaves antigas. Sem isso, um item novo só aparecia na busca depois
 			// que o transient expirasse (cache_duration, padrão 1h).

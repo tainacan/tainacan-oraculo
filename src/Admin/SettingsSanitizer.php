@@ -58,6 +58,7 @@ class SettingsSanitizer {
 			'deepseek_api_key',
 			'groq_api_key',
 			'claude_api_key',
+			'generic_openai_api_key',
 		);
 
 		foreach ( $api_keys as $key ) {
@@ -93,6 +94,21 @@ class SettingsSanitizer {
 		$sanitized['ollama_url'] = esc_url_raw(
 			(string) ( $input['ollama_url'] ?? $current['ollama_url'] ?? 'http://localhost:11434' )
 		);
+
+		// Provedor compatível com OpenAI: URL própria e modelos de nome livre
+		// (vêm do /models do servidor configurado, não de um catálogo fixo).
+		$sanitized['generic_openai_api_base_url']    = esc_url_raw(
+			(string) ( $input['generic_openai_api_base_url'] ?? $current['generic_openai_api_base_url'] ?? '' )
+		);
+		$sanitized['generic_openai_model']           = $text( 'generic_openai_model', '' );
+		$sanitized['generic_openai_embedding_model'] = $text( 'generic_openai_embedding_model', '' );
+
+		// Estratégia de RAG: local (vetores do Oráculo), provider (sem
+		// recuperação local — o provedor responde sozinho, ex.: Open WebUI com
+		// base de conhecimento) ou hybrid (local; se o embedding ou a busca
+		// vetorial falharem, segue sem contexto em vez de devolver erro).
+		$rag_strategy              = $text( 'rag_strategy', 'local' );
+		$sanitized['rag_strategy'] = in_array( $rag_strategy, array( 'local', 'provider', 'hybrid' ), true ) ? $rag_strategy : 'local';
 
 		// Parâmetros numéricos
 		$sanitized['max_tokens'] = absint( $input['max_tokens'] ?? $current['max_tokens'] ?? 2000 );

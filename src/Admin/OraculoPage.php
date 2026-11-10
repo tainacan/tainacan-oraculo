@@ -356,6 +356,7 @@ class OraculoPage extends \Tainacan\Pages {
 			'deepseek_api_key',
 			'groq_api_key',
 			'claude_api_key',
+			'generic_openai_api_key',
 		);
 
 		foreach ( $sensitive_keys as $key ) {

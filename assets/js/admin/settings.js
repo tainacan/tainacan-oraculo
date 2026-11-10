@@ -117,9 +117,11 @@
 			var status = $('.oraculo-fetch-models-status[data-provider="' + provider + '"]');
 			// Provedores por URL (sem API key): Ollama e CLIP.
 			var isUrlProvider = provider === 'ollama' || provider === 'clip';
+			// Compatível com OpenAI: URL e chave (opcional) juntas.
+			var isGeneric = provider === 'generic_openai';
 
 			var apiKey = isUrlProvider ? '' : (panel.find('input[type="password"]').val() || '').trim();
-			var ollamaUrl = isUrlProvider ? (panel.find('input[type="url"]').val() || '').trim() : '';
+			var ollamaUrl = (isUrlProvider || isGeneric) ? (panel.find('input[type="url"]').val() || '').trim() : '';
 
 			button.prop('disabled', true);
 			status.removeClass('oraculo-fetch-error oraculo-fetch-ok').text(s.fetchingModels || 'Buscando...');
@@ -145,7 +147,13 @@
 
 					var models = response.data.models || [];
 
-					if (isUrlProvider) {
+					if (isGeneric) {
+						var chatList = $('#oraculo-generic_openai-models-list').empty();
+						var embeddingList = $('#oraculo-generic_openai-embedding-models-list').empty();
+						models.forEach(function(m) {
+							(m.embedding ? embeddingList : chatList).append($('<option>').attr('value', m.id));
+						});
+					} else if (isUrlProvider) {
 						var datalist = $('#oraculo-' + provider + '-models-list');
 						datalist.empty();
 						models.forEach(function(m) {

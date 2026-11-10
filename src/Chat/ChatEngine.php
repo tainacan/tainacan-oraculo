@@ -290,6 +290,7 @@ class ChatEngine {
 					$this->options[ $provider . '_model' ] ?? '',
 					$this->get_chat_system_prompt(),
 					$this->options['max_results'] ?? 10,
+					$this->options['rag_strategy'] ?? 'local',
 					determine_locale(),
 					\Oraculo_Tainacan\get_index_version(),
 				)
@@ -311,7 +312,12 @@ class ChatEngine {
 	private function answer( string $message, array $history, array $collection_ids, array $options, array &$sources, bool &$cacheable ) {
 		$context = '';
 
-		if ( $this->should_search_context( $message, $history ) ) {
+		// Estratégia de RAG 'provider' (tainacan-oraculo#4): a conversa vai
+		// direto ao provedor, sem consultar os vetores. 'local' e 'hybrid' se
+		// comportam igual aqui: a BIA já segue sem contexto se a busca falha.
+		$rag_from_provider = 'provider' === ( $this->options['rag_strategy'] ?? 'local' );
+
+		if ( ! $rag_from_provider && $this->should_search_context( $message, $history ) ) {
 			// Follow-ups não têm âncora semântica sozinhos ("e quem
 			// escreveu?"): o embedding só da mensagem atual não recupera
 			// nada. A query de busca leva junto as últimas perguntas do

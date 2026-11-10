@@ -97,9 +97,9 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
 				foreach ( $providers as $provider ) :
 					$pid = $provider['id'];
 
-					// Ollama e CLIP são serviços por URL (sem API key e com nomes
-					// livres de modelo); têm painéis próprios abaixo.
-					if ( in_array( $pid, array( 'ollama', 'clip' ), true ) ) {
+					// Ollama, CLIP e o compatível com OpenAI são serviços por URL
+					// (com nomes livres de modelo); têm painéis próprios abaixo.
+					if ( in_array( $pid, array( 'ollama', 'clip', 'generic_openai' ), true ) ) {
 						continue;
 					}
 
@@ -242,7 +242,84 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
 					</table>
 				</div>
 
-				<div class="oraculo-provider-settings" id="provider-settings-clip" style="<?php echo $options['ai_provider'] === 'clip' ? '' : 'display:none;'; ?>">
+				<?php
+				// Sugestões de modelo vêm do cache do último "Testar Conexão" ou
+				// "Buscar modelos" — nunca de uma consulta ao abrir a tela.
+				$generic_provider = $factory->create( 'generic_openai' );
+				?>
+				<div class="oraculo-provider-settings" id="provider-settings-generic_openai" style="<?php echo 'generic_openai' === $options['ai_provider'] ? '' : 'display:none;'; ?>">
+					<h3><?php esc_html_e( 'OpenAI Compatível (Genérico)', 'oraculo-tainacan' ); ?></h3>
+					<table class="form-table">
+						<tr>
+							<th><?php esc_html_e( 'URL Base da API', 'oraculo-tainacan' ); ?></th>
+							<td>
+								<input type="url"
+										name="oraculo_tainacan_options[generic_openai_api_base_url]"
+										value="<?php echo esc_attr( $options['generic_openai_api_base_url'] ?? '' ); ?>"
+										class="regular-text"
+										placeholder="https://api.exemplo.com/v1">
+								<button type="button" class="button oraculo-test-connection" data-provider="generic_openai">
+									<?php esc_html_e( 'Testar Conexão', 'oraculo-tainacan' ); ?>
+								</button>
+								<p class="description">
+									<?php esc_html_e( 'Endereço que responde /models, /chat/completions e /embeddings. Exemplos: https://api.openai.com/v1, http://localhost:11434/v1 (Ollama), https://host/api (Open WebUI). Salve antes de testar.', 'oraculo-tainacan' ); ?>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'API Key', 'oraculo-tainacan' ); ?></th>
+							<td>
+								<input type="password"
+										name="oraculo_tainacan_options[generic_openai_api_key]"
+										value="<?php echo ! empty( $options['generic_openai_api_key'] ) ? '••••••••' : ''; ?>"
+										class="regular-text"
+										autocomplete="new-password">
+								<p class="description">
+									<?php esc_html_e( 'Opcional para endpoints sem autenticação. Quando preenchida, vai no cabeçalho Authorization: Bearer.', 'oraculo-tainacan' ); ?>
+								</p>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Modelo de Chat', 'oraculo-tainacan' ); ?></th>
+							<td>
+								<input type="text"
+										name="oraculo_tainacan_options[generic_openai_model]"
+										value="<?php echo esc_attr( $options['generic_openai_model'] ?? '' ); ?>"
+										class="regular-text"
+										list="oraculo-generic_openai-models-list">
+								<datalist id="oraculo-generic_openai-models-list">
+									<?php foreach ( $generic_provider->get_available_models() as $model ) : ?>
+										<option value="<?php echo esc_attr( $model['id'] ); ?>"></option>
+									<?php endforeach; ?>
+								</datalist>
+								<button type="button" class="button oraculo-fetch-models" data-provider="generic_openai">
+									<?php esc_html_e( 'Buscar modelos', 'oraculo-tainacan' ); ?>
+								</button>
+								<p class="oraculo-fetch-models-status" data-provider="generic_openai"></p>
+							</td>
+						</tr>
+						<tr>
+							<th><?php esc_html_e( 'Modelo de Embedding', 'oraculo-tainacan' ); ?></th>
+							<td>
+								<input type="text"
+										name="oraculo_tainacan_options[generic_openai_embedding_model]"
+										value="<?php echo esc_attr( $options['generic_openai_embedding_model'] ?? '' ); ?>"
+										class="regular-text"
+										list="oraculo-generic_openai-embedding-models-list">
+								<datalist id="oraculo-generic_openai-embedding-models-list">
+									<?php foreach ( $generic_provider->get_embedding_models() as $model ) : ?>
+										<option value="<?php echo esc_attr( $model['id'] ); ?>"></option>
+									<?php endforeach; ?>
+								</datalist>
+								<p class="description">
+									<?php esc_html_e( 'Necessário só se este provedor também gerar os embeddings (tela de Indexação). Trocar o modelo exige reindexar o acervo.', 'oraculo-tainacan' ); ?>
+								</p>
+							</td>
+						</tr>
+					</table>
+				</div>
+
+				<div class="oraculo-provider-settings" id="provider-settings-clip"style="<?php echo $options['ai_provider'] === 'clip' ? '' : 'display:none;'; ?>">
 					<h3><?php esc_html_e( 'Busca Visual (CLIP) — AI API do IBRAM', 'oraculo-tainacan' ); ?></h3>
 					<p class="description">
 						<?php esc_html_e( 'Busca por similaridade visual entre texto e imagens (CLIP + pgvector). Neste modo a busca em linguagem natural roda no espaço visual e restrições como "século 21" viram filtros de metadado; não há resposta gerada por IA — os resultados são as obras mais próximas da consulta. O chat fica indisponível.', 'oraculo-tainacan' ); ?>
@@ -344,6 +421,26 @@ $collections = \Oraculo_Tainacan\get_tainacan_collections();
 									name="oraculo_tainacan_options[max_results]"
 									value="<?php echo esc_attr( $options['max_results'] ?? 10 ); ?>"
 									min="1" max="50">
+						</td>
+					</tr>
+					<tr>
+						<th><?php esc_html_e( 'Estratégia de RAG', 'oraculo-tainacan' ); ?></th>
+						<td>
+							<?php $rag_strategy = $options['rag_strategy'] ?? 'local'; ?>
+							<select name="oraculo_tainacan_options[rag_strategy]">
+								<option value="local" <?php selected( $rag_strategy, 'local' ); ?>>
+									<?php esc_html_e( 'Local (embeddings do Oráculo)', 'oraculo-tainacan' ); ?>
+								</option>
+								<option value="provider" <?php selected( $rag_strategy, 'provider' ); ?>>
+									<?php esc_html_e( 'Provedor (sem recuperação local)', 'oraculo-tainacan' ); ?>
+								</option>
+								<option value="hybrid" <?php selected( $rag_strategy, 'hybrid' ); ?>>
+									<?php esc_html_e( 'Híbrido (local com fallback para provedor)', 'oraculo-tainacan' ); ?>
+								</option>
+							</select>
+							<p class="description">
+								<?php esc_html_e( 'Local: a resposta usa os itens encontrados nos vetores do Oráculo. Provedor: a pergunta vai direto ao modelo, sem cartões de itens — para provedores que já consultam o acervo por conta própria (ex.: Open WebUI com base de conhecimento). Híbrido: tenta o local e, se o embedding ou a busca falharem, responde só com o provedor.', 'oraculo-tainacan' ); ?>
+							</p>
 						</td>
 					</tr>
 					<tr>

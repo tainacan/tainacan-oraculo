@@ -16,6 +16,7 @@ use Oraculo_Tainacan\AI\Providers\OllamaProvider;
 use Oraculo_Tainacan\AI\Providers\GroqProvider;
 use Oraculo_Tainacan\AI\Providers\ClaudeProvider;
 use Oraculo_Tainacan\AI\Providers\ClipProvider;
+use Oraculo_Tainacan\AI\Providers\GenericOpenAIProvider;
 
 /**
  * Factory para instanciar provedores de IA
@@ -28,13 +29,14 @@ class AIProviderFactory {
 	 * @var array
 	 */
 	private static array $providers = array(
-		'openai'   => OpenAIProvider::class,
-		'gemini'   => GeminiProvider::class,
-		'deepseek' => DeepSeekProvider::class,
-		'ollama'   => OllamaProvider::class,
-		'groq'     => GroqProvider::class,
-		'claude'   => ClaudeProvider::class,
-		'clip'     => ClipProvider::class,
+		'openai'         => OpenAIProvider::class,
+		'gemini'         => GeminiProvider::class,
+		'deepseek'       => DeepSeekProvider::class,
+		'ollama'         => OllamaProvider::class,
+		'groq'           => GroqProvider::class,
+		'claude'         => ClaudeProvider::class,
+		'generic_openai' => GenericOpenAIProvider::class,
+		'clip'           => ClipProvider::class,
 	);
 
 	/**
@@ -97,7 +99,7 @@ class AIProviderFactory {
 		$provider_id = $options['ai_provider'] ?? 'openai';
 
 		// Provedores que suportam embeddings
-		$embedding_providers = array( 'openai', 'ollama' );
+		$embedding_providers = array( 'openai', 'ollama', 'generic_openai' );
 
 		// A tela de indexação permite escolher um provedor de embeddings
 		// diferente do provedor de chat (ex: chat via Gemini, embeddings via
@@ -119,7 +121,7 @@ class AIProviderFactory {
 			}
 
 			throw new \RuntimeException(
-				esc_html__( 'Nenhum provedor configurado suporta geração de embeddings. Configure OpenAI ou Ollama.', 'oraculo-tainacan' )
+				esc_html__( 'Nenhum provedor configurado suporta geração de embeddings. Configure OpenAI, Ollama ou um provedor compatível com OpenAI.', 'oraculo-tainacan' )
 			);
 		}
 
@@ -203,6 +205,17 @@ class AIProviderFactory {
 					)
 				);
 
+			case 'generic_openai':
+				return array_merge(
+					$common,
+					array(
+						'api_base_url'    => $options['generic_openai_api_base_url'] ?? '',
+						'api_key'         => $options['generic_openai_api_key'] ?? '',
+						'model'           => $options['generic_openai_model'] ?? '',
+						'embedding_model' => $options['generic_openai_embedding_model'] ?? '',
+					)
+				);
+
 			case 'clip':
 				return array(
 					'base_url' => $options['clip_api_url'] ?? '',
@@ -266,6 +279,8 @@ class AIProviderFactory {
 				return ! empty( $options['groq_api_key'] );
 			case 'claude':
 				return ! empty( $options['claude_api_key'] );
+			case 'generic_openai':
+				return ! empty( $options['generic_openai_api_base_url'] );
 			case 'clip':
 				return ! empty( $options['clip_api_url'] );
 			default:

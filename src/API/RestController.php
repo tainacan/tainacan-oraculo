@@ -1120,7 +1120,7 @@ class RestController extends WP_REST_Controller {
 		$options = \Oraculo_Tainacan\Oraculo_Tainacan::get_options();
 
 		// Ocultar chaves de API
-		$sensitive = array( 'openai_api_key', 'gemini_api_key', 'deepseek_api_key', 'groq_api_key', 'claude_api_key' );
+		$sensitive = array( 'openai_api_key', 'gemini_api_key', 'deepseek_api_key', 'groq_api_key', 'claude_api_key', 'generic_openai_api_key' );
 		foreach ( $sensitive as $key ) {
 			if ( ! empty( $options[ $key ] ) ) {
 				$options[ $key ] = '••••••••';
